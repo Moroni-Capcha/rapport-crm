@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/* ───────────────────────── Design tokens ─────────────────────────
+   Dark mode de alto contraste sutil: grises profundos (nunca #000),
+   bordes con blanco translúcido y acentos de estado desaturados.      */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: #0e0f11;
+  --color-surface: #141518;
+  --color-surface-2: #1a1b1f;
+  --color-surface-3: #222328;
+  --color-line: rgb(255 255 255 / 0.06);
+  --color-line-strong: rgb(255 255 255 / 0.11);
+  --color-fg: #ececee;
+  --color-fg-muted: #a0a0a8;
+  --color-fg-subtle: #6c6c75;
+
+  /* "Tinta" para overlays sutiles (hover, tracks, bordes): blanco en dark, casi negro en light */
+  --color-ink: #ffffff;
+  --color-shade: #000000;
+  --color-scrim: #000000;
+  --color-danger: #f87171;
+
+  /* Avatares: fondo + texto por tono */
+  --color-tone-1: #2a2c33;
+  --color-tone-1-fg: #c9cbd4;
+  --color-tone-2: #2b3038;
+  --color-tone-2-fg: #b9c6d8;
+  --color-tone-3: #302d36;
+  --color-tone-3-fg: #cfc2dc;
+  --color-tone-4: #2d322f;
+  --color-tone-4-fg: #bfd2c5;
+  --color-tone-5: #35302a;
+  --color-tone-5-fg: #dccbb3;
+
+  /* Acentos por etapa (desaturados para no competir con los datos) */
+  --color-stage-leads: #8e909b;
+  --color-stage-discovery: #6f9ce6;
+  --color-stage-proposal: #a08ae6;
+  --color-stage-negotiation: #d9a956;
+  --color-stage-kickoff: #56b886;
+
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-slide-in: slide-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-pop: pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-in {
+    from { transform: translateX(24px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes pop {
+    from { transform: translateY(6px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+}
+
+/* ───────────────────────── Modo claro ─────────────────────────
+   Mismos tokens, otros valores. Se activa con data-theme="light" en <html>
+   (lo pone useTheme) o, antes de hidratar, por la preferencia del sistema.   */
+:root { color-scheme: dark; }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-canvas: #f3f3f5;
+  --color-surface: #fafafb;
+  --color-surface-2: #ffffff;
+  --color-surface-3: #ececef;
+  --color-line: rgb(22 24 32 / 0.08);
+  --color-line-strong: rgb(22 24 32 / 0.14);
+  --color-fg: #16171b;
+  --color-fg-muted: #4f5059;
+  --color-fg-subtle: #7d7e88;
+
+  --color-ink: #16171b;
+  --color-shade: rgb(24 28 40 / 0.28);
+  --color-scrim: rgb(24 28 40 / 0.55);
+  --color-danger: #d23b3b;
+
+  --color-stage-leads: #6e707c;
+  --color-stage-discovery: #3a6fc4;
+  --color-stage-proposal: #7559cc;
+  --color-stage-negotiation: #a8741a;
+  --color-stage-kickoff: #2b8a5d;
+
+  --color-tone-1: #e7e8ec;
+  --color-tone-1-fg: #3f4250;
+  --color-tone-2: #e2e8f1;
+  --color-tone-2-fg: #33475f;
+  --color-tone-3: #ebe5f1;
+  --color-tone-3-fg: #4f3f63;
+  --color-tone-4: #e2ece6;
+  --color-tone-4-fg: #34503f;
+  --color-tone-5: #f1e9de;
+  --color-tone-5-fg: #5e4a2c;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-canvas text-fg font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection { background: color-mix(in oklab, var(--color-ink) 18%, transparent); }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  /* Scrollbars discretos para columnas densas */
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--color-ink) 12%, transparent) transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--color-ink) 9%, transparent); border-radius: 999px; }
+  .scroll-thin::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--color-ink) 18%, transparent); }
+}
+
+/* ───────────────────────── Impresión de propuestas ─────────────────────────
+   Solo se imprime el documento (.print-doc), en blanco y sin la interfaz.       */
+@media print {
+  #root,
+  .no-print {
+    display: none !important;
+  }
+  .print-root {
+    position: static !important;
+    overflow: visible !important;
+    background: none !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+  }
+  .print-doc {
+    max-width: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    animation: none !important;
+  }
+  @page {
+    margin: 18mm;
+  }
+}
