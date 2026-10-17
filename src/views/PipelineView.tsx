@@ -180,7 +180,7 @@ export function PipelineView({ query, onQuery, settings, onNewLead, focus, navig
         />
       </div>
       <div className="min-h-[560px] flex-1 px-4 pb-4 md:min-h-0 md:px-6">
-        <KanbanBoard stages={STAGES} deals={visible} sort={sort} settings={settings} onReorder={handleReorder} onOpen={setSelectedId} onAdd={onNewLead} />
+        <KanbanBoard stages={STAGES} deals={visible} allDeals={deals} sort={sort} settings={settings} onReorder={handleReorder} onOpen={setSelectedId} onAdd={onNewLead} />
       </div>
 
       <DealDrawer deal={selected} onClose={closeDrawer} onMove={handleMove} onUpdate={updateDeal} onLog={handleLog} onHandoff={handleHandoff} onLose={handleLose} onQuote={(d) => setQuoting(d.id)} onPreview={(d) => d.quote && setPreview({ dealId: d.id, quote: d.quote })} />

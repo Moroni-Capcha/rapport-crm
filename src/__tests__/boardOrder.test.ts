@@ -98,6 +98,31 @@ describe('planDrop contra el reducer', () => {
     expect(next.deals).toHaveLength(state.deals.length);
   });
 
+  it('con filtros: los deals ocultos conservan su sitio al congelar el orden', () => {
+    // 6 deals en una sola etapa, para no depender del tamaño de los datos de ejemplo
+    const seed = seedState();
+    const stage: StageId = 'leads';
+    const state: State = { ...seed, deals: seed.deals.slice(0, 6).map((d) => ({ ...d, stage })) };
+    // Orden mostrado completo (distinto al del array) y un deal de cada dos oculto por un filtro
+    const full = columnsOf(state);
+    for (const st of STAGE_IDS) full[st] = [...full[st]].reverse();
+    const ids = full[stage];
+    expect(ids.length).toBeGreaterThanOrEqual(5);
+    const hidden = new Set(ids.filter((_, i) => i % 2 === 1));
+    const visible = { ...full, [stage]: ids.filter((id) => !hidden.has(id)) };
+    const [a, b, c] = visible[stage];
+
+    const plan = planDrop(visible, a!, b!, false, full)!;
+    expect(plan.switchToManual).toBe(true);
+    const result = stageIds(apply(state, plan), stage);
+
+    // Los ocultos no saltan al principio: quedan donde estaban respecto a los visibles
+    const expected = ids.filter((id) => id !== a);
+    expected.splice(expected.indexOf(c!), 0, a!);
+    expect(result).toEqual(expected);
+    expect(result.filter((id) => hidden.has(id))).toEqual(ids.filter((id) => hidden.has(id)));
+  });
+
   it('cruce de columna: cambia etapa y probabilidad, y queda en la posición indicada', () => {
     const state = seedState();
     const from = biggest(state);

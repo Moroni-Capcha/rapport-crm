@@ -29,7 +29,10 @@ import { KanbanColumn } from './KanbanColumn';
 
 interface KanbanBoardProps {
   stages: Stage[];
+  /** Deals visibles (ya filtrados) */
   deals: Deal[];
+  /** Todos los deals, sin filtrar */
+  allDeals: Deal[];
   sort: SortKey;
   settings: BoardSettings;
   onReorder: (id: string, plan: DropPlan) => void;
@@ -45,13 +48,24 @@ const SORTERS: Record<Exclude<SortKey, 'manual'>, (a: Deal, b: Deal) => number> 
   probability: (a, b) => b.probability - a.probability || b.value - a.value,
 };
 
+function groupByStage(stages: Stage[], deals: Deal[], sort: SortKey) {
+  const byStage = Object.fromEntries(stages.map((s) => [s.id, [] as Deal[]])) as Record<StageId, Deal[]>;
+  for (const d of deals) byStage[d.stage].push(d);
+  // Manual: se respeta el orden de `deals` sin reordenar
+  if (sort !== 'manual') for (const s of stages) byStage[s.id].sort(SORTERS[sort]);
+  return byStage;
+}
+
+const idsOf = (stages: Stage[], columns: Record<StageId, Deal[]>) =>
+  Object.fromEntries(stages.map((s) => [s.id, columns[s.id].map((d) => d.id)])) as Columns;
+
 // Con ratón/touch manda dónde está el puntero; con teclado no hay puntero y se usa la cercanía de esquinas
 const collisionDetection: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
   return hits.length > 0 ? hits : closestCorners(args);
 };
 
-export function KanbanBoard({ stages, deals, sort, settings, onReorder, onOpen, onAdd }: KanbanBoardProps) {
+export function KanbanBoard({ stages, deals, allDeals, sort, settings, onReorder, onOpen, onAdd }: KanbanBoardProps) {
   const t = useT();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<StageId | null>(null);
@@ -65,17 +79,14 @@ export function KanbanBoard({ stages, deals, sort, settings, onReorder, onOpen, 
   );
 
   // Agrupa y ordena una sola vez por cambio de datos/orden
-  const columns = useMemo(() => {
-    const byStage = Object.fromEntries(stages.map((s) => [s.id, [] as Deal[]])) as Record<StageId, Deal[]>;
-    for (const d of deals) byStage[d.stage].push(d);
-    // Manual: se respeta el orden de `deals` sin reordenar
-    if (sort !== 'manual') for (const s of stages) byStage[s.id].sort(SORTERS[sort]);
-    return byStage;
-  }, [stages, deals, sort]);
+  const columns = useMemo(() => groupByStage(stages, deals, sort), [stages, deals, sort]);
 
-  const columnIds = useMemo(
-    () => Object.fromEntries(stages.map((s) => [s.id, columns[s.id].map((d) => d.id)])) as Columns,
-    [stages, columns],
+  const columnIds = useMemo(() => idsOf(stages, columns), [stages, columns]);
+
+  // Orden de todos los deals (incluidos los ocultos por filtros): lo que se congela al pasar a manual
+  const fullColumnIds = useMemo(
+    () => (allDeals === deals ? columnIds : idsOf(stages, groupByStage(stages, allDeals, sort))),
+    [stages, allDeals, deals, sort, columnIds],
   );
 
   const stageOf = useCallback(
@@ -105,7 +116,7 @@ export function KanbanBoard({ stages, deals, sort, settings, onReorder, onOpen, 
   const handleDragStart = (e: DragStartEvent) => setDraggingId(String(e.active.id));
   const handleDragOver = (e: DragOverEvent) => setOverStage(e.over ? stageOf(String(e.over.id)) : null);
   const handleDragEnd = (e: DragEndEvent) => {
-    const plan = e.over ? planDrop(columnIds, String(e.active.id), String(e.over.id), sort === 'manual') : null;
+    const plan = e.over ? planDrop(columnIds, String(e.active.id), String(e.over.id), sort === 'manual', fullColumnIds) : null;
     reset();
     if (plan) onReorder(String(e.active.id), plan);
   };

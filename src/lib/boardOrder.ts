@@ -58,9 +58,17 @@ export function resolveDrop(columns: Columns, activeId: string, overId: string |
 
 /**
  * Plan de operaciones para el store. Si el orden mostrado no es el manual y se reordena
- * dentro de la columna, primero "congela" el orden visible en `state.deals`.
+ * dentro de la columna, primero "congela" el orden en `state.deals`.
+ * `full` es el orden de TODOS los deals (también los ocultos por filtros); así los ocultos
+ * quedan en su sitio y no saltan al principio de la columna. Sin filtros coincide con `columns`.
  */
-export function planDrop(columns: Columns, activeId: string, overId: string | null, manual: boolean): DropPlan | null {
+export function planDrop(
+  columns: Columns,
+  activeId: string,
+  overId: string | null,
+  manual: boolean,
+  full: Columns = columns,
+): DropPlan | null {
   const placement = resolveDrop(columns, activeId, overId);
   if (!placement) return null;
   const from = findStage(columns, activeId)!;
@@ -69,8 +77,8 @@ export function planDrop(columns: Columns, activeId: string, overId: string | nu
 
   const ops: ReorderOp[] = [];
   if (switchToManual) {
-    for (const stage of Object.keys(columns) as StageId[]) {
-      for (const id of columns[stage]) ops.push({ id, stage, beforeId: null });
+    for (const stage of Object.keys(full) as StageId[]) {
+      for (const id of full[stage]) ops.push({ id, stage, beforeId: null });
     }
   }
   ops.push({ id: activeId, ...placement });
