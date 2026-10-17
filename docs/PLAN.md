@@ -37,7 +37,7 @@ Documentos relacionados:
 
 **Objetivo:** que los dos puedan trabajar en paralelo sin bloquearse.
 
-- [ ] Elegir stack del backend (lenguaje, framework).
+- [ ] Elegir stack del backend (lenguaje, framework). Hay una propuesta en `docs/BACKEND.md` §8: TypeScript + Node 22 + Fastify + Zod + Postgres + Drizzle, con REST + OpenAPI.
 - [ ] Elegir estilo de API: REST o tRPC.
 - [ ] Elegir base de datos (recomendado: Postgres, por las transacciones del handoff y el correlativo de facturas).
 - [ ] Definir autenticación (JWT, cookie de sesión o proveedor externo) y roles (¿un vendedor ve solo sus deals?).

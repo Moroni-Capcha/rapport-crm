@@ -154,15 +154,50 @@ Hoy existe `LoginScreen.tsx`, pero es solo de demo. Falta definir:
 
 Los textos visibles se traducen en el frontend. Los datos que vienen de la API (nombres de proyecto, actividades, etc.) se traducen hoy por la misma función `t()` con el texto en español como clave. Decisión pendiente: o el backend guarda en español y el cliente sigue traduciendo, o se guardan campos por idioma.
 
-## 8. Decisiones abiertas (a resolver entre los dos)
+## 8. Stack recomendado (propuesta, a confirmar con quien construye el backend)
 
-1. ¿REST o tRPC? (el comentario del store menciona React Query / tRPC / Supabase).
+Es una recomendación, no una imposición: si el stack que mejor dominas es otro, manda eso. Lo importante es respetar las reglas de las secciones 3 y 4.
+
+| Capa | Propuesta | Por qué |
+|---|---|---|
+| Lenguaje | **TypeScript sobre Node 22** | El frontend ya es TypeScript strict y requiere Node ≥ 22.12. Se pueden compartir tipos y validaciones y reutilizar `quoteTotals`, en vez de reescribir la fórmula en otro lenguaje (que es justo donde nacen las divergencias). |
+| Framework HTTP | **Fastify** (alternativa: Hono) | Ligero, rápido, con validación por esquema integrada. NestJS aporta estructura pero es pesado para este tamaño. |
+| Validación | **Zod** | Un solo esquema valida la entrada y genera los tipos y el OpenAPI. |
+| Estilo de API | **REST + OpenAPI** | El plan es contract-first y dos personas trabajando en paralelo: un contrato escrito vale más que tipos implícitos. tRPC da tipos de punta a punta, pero obliga a compartir código y acopla ambos lados. |
+| Base de datos | **PostgreSQL** | Necesitas transacciones (handoff), secuencias atómicas (número de factura) y consistencia al reordenar. |
+| Acceso a datos | **Drizzle ORM** (alternativa: Prisma) + migraciones versionadas | Tipado y cercano a SQL, sin perder el control de las transacciones. Con Prisma sería igualmente válido. |
+| Autenticación | Sesión por **cookie httpOnly** con una librería probada (por ejemplo Better Auth o Lucia) | Evita guardar tokens en `localStorage`. No escribir criptografía propia. |
+| Tests | **Vitest** (el mismo del frontend) + Testcontainers o una base Postgres de test | Misma herramienta en los dos lados y pruebas contra Postgres real para facturas y concurrencia. |
+| Entorno | **Docker Compose** (API + Postgres) | Que el compañero levante todo con un comando. |
+| Hosting | Railway, Render o Fly.io para la API + Postgres administrado (Neon o el de la plataforma) | Despliegue simple para un equipo de dos. |
+
+### Alternativa: Supabase (Postgres + Auth + API generada)
+
+Más rápida para empezar y el comentario del store ya la menciona. El costo: las reglas críticas (handoff transaccional, correlativo de facturas, recálculo del cotizador) acaban en funciones SQL o *edge functions*, más difíciles de testear y de versionar. Es una buena elección si la prioridad es sacar una primera versión rápido; la propuesta de arriba es mejor si la prioridad es tener las reglas de negocio bajo control y bien probadas.
+
+### Estructura de proyecto sugerida
+
+```
+backend/
+  src/
+    modules/        deals/, projects/, events/, metrics/  (rutas + servicio + repositorio por módulo)
+    domain/         lógica pura: etapas, cotizador, facturación (sin I/O, 100 % testeable)
+    db/             esquema, migraciones, seed de desarrollo
+    http/           servidor, auth, manejo de errores, OpenAPI
+  tests/
+```
+
+Misma idea que el frontend: la lógica de dominio pura y separada de la infraestructura. `domain/` es donde viven las reglas de la sección 3.
+
+## 9. Decisiones abiertas (a resolver entre los dos)
+
+1. ¿Se acepta el stack propuesto en la sección 8, o se ajusta? (el comentario del store menciona React Query / tRPC / Supabase).
 2. Base de datos: relacional (Postgres) encaja bien por las transacciones del handoff y el correlativo de facturas.
 3. Moneda: hoy todo es USD. ¿Se mantiene o se agrega multimoneda?
 4. Multi-tenant: ¿una sola agencia o varias?
 5. Estrategia de actualización en tiempo real (polling vs. websockets), si dos personas mueven el mismo kanban.
 
-## 9. Tests mínimos esperados
+## 10. Tests mínimos esperados
 
 - `quoteTotals`: mismos resultados que `src/lib/quote.ts` (se pueden reutilizar los casos de `src/__tests__/`).
 - Mover deal: probabilidad y actividad correctas; mover a la misma etapa es no-op.
