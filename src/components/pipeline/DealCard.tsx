@@ -1,7 +1,9 @@
-import { CircleCheck, FileText, Mail, Phone, StickyNote, Video } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { CircleCheck, FileText, GripVertical, Mail, Phone, StickyNote, Video } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
-import type { DragEvent } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties, Ref } from 'react';
 import { TOUCH_LABEL } from '../../data/stages';
 import { cn, formatCurrency, formatRelative, staleness } from '../../lib/format';
 import type { BoardSettings, Deal, TouchType } from '../../types';
@@ -28,47 +30,67 @@ const PRIORITY_STYLE = {
   baja: 'text-fg-subtle border-line',
 } as const;
 
-interface DealCardProps {
+interface DealCardViewProps {
   deal: Deal;
   settings: BoardSettings;
-  dragging: boolean;
-  onOpen: (id: string) => void;
-  onDragStart: (id: string) => void;
-  onDragEnd: () => void;
+  /** Tarjeta fantasma en la columna mientras se arrastra su copia */
+  ghost?: boolean;
+  /** Copia que sigue al puntero (DragOverlay) */
+  overlay?: boolean;
+  onOpen?: (id: string) => void;
+  cardRef?: Ref<HTMLElement>;
+  style?: CSSProperties;
+  handleRef?: Ref<HTMLButtonElement>;
+  handleProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
-function DealCardBase({ deal, settings, dragging, onOpen, onDragStart, onDragEnd }: DealCardProps) {
+export function DealCardView({ deal, settings, ghost, overlay, onOpen, cardRef, style, handleRef, handleProps }: DealCardViewProps) {
   const t = useT();
   const last = deal.activities.find((a) => a.type !== 'note') ?? deal.activities[0]!;
   const TouchIcon = TOUCH_ICON[last.type];
   const stale = staleness(last.at);
   const won = deal.stage === 'kickoff';
 
-  const handleDragStart = (e: DragEvent) => {
-    e.dataTransfer.setData('text/plain', deal.id);
-    e.dataTransfer.effectAllowed = 'move';
-    onDragStart(deal.id);
-  };
-
   return (
     <article
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={onDragEnd}
-      onClick={() => onOpen(deal.id)}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen(deal.id))}
-      tabIndex={0}
+      ref={cardRef}
+      style={style}
+      onClick={() => onOpen?.(deal.id)}
+      onKeyDown={(e) => {
+        // Las teclas del asa (arrastre con teclado) no abren el detalle
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') (e.preventDefault(), onOpen?.(deal.id));
+      }}
+      tabIndex={overlay ? -1 : 0}
       aria-label={`${deal.company}, ${formatCurrency(deal.value)}`}
       className={cn(
-        'group cursor-grab rounded-xl border border-line bg-surface-2 transition-all duration-150 active:cursor-grabbing',
+        'group relative cursor-pointer rounded-xl border border-line bg-surface-2 transition-all duration-150',
         'hover:border-line-strong hover:bg-surface-3 hover:shadow-lg hover:shadow-shade/30',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25',
         settings.compact ? 'p-3' : 'p-3.5',
-        dragging && 'scale-[0.98] opacity-40',
+        ghost && 'scale-[0.98] opacity-40',
+        overlay && 'cursor-grabbing border-line-strong shadow-xl shadow-shade/40',
       )}
     >
+      {!overlay && (
+        <button
+          type="button"
+          ref={handleRef}
+          {...handleProps}
+          aria-label={t('Arrastrar tarjeta')}
+          title={t('Arrastrar tarjeta')}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            'absolute right-1.5 top-1.5 z-10 flex size-6 cursor-grab touch-none items-center justify-center rounded-md text-fg-subtle',
+            'opacity-0 transition-opacity hover:bg-ink/[0.06] hover:text-fg group-hover:opacity-100 group-focus-within:opacity-100',
+            'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 [@media(hover:none)]:opacity-100',
+          )}
+        >
+          <GripVertical className="size-4" />
+        </button>
+      )}
       {/* Empresa + proyecto */}
-      <header className="flex items-start gap-2.5">
+      <header className="flex items-start gap-2.5 pr-5">
         <Avatar name={deal.company} size="md" square />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -140,6 +162,28 @@ function DealCardBase({ deal, settings, dragging, onOpen, onDragStart, onDragEnd
         </span>
       </footer>
     </article>
+  );
+}
+
+interface DealCardProps {
+  deal: Deal;
+  settings: BoardSettings;
+  onOpen: (id: string) => void;
+}
+
+function DealCardBase({ deal, settings, onOpen }: DealCardProps) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: deal.id });
+  return (
+    <DealCardView
+      deal={deal}
+      settings={settings}
+      ghost={isDragging}
+      onOpen={onOpen}
+      cardRef={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      handleRef={setActivatorNodeRef}
+      handleProps={{ ...attributes, ...listeners } as ButtonHTMLAttributes<HTMLButtonElement>}
+    />
   );
 }
 

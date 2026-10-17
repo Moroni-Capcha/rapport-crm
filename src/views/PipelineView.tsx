@@ -10,6 +10,7 @@ import { KanbanBoard } from '../components/pipeline/KanbanBoard';
 import { PipelineHeader } from '../components/pipeline/PipelineHeader';
 import type { PipelineStats } from '../components/pipeline/PipelineHeader';
 import { SEGMENTS, STAGES, STAGE_BY_ID } from '../data/stages';
+import type { DropPlan } from '../lib/boardOrder';
 import { daysSince } from '../lib/format';
 import { useStore } from '../store/AppStore';
 import { lastTouch } from '../store/selectors';
@@ -24,11 +25,31 @@ interface PipelineViewProps extends ViewProps {
   onNewLead: (stage?: StageId) => void;
 }
 
+const SORT_STORAGE_KEY = 'rapport-pipeline-sort';
+const SORT_KEYS: SortKey[] = ['recent', 'value', 'probability', 'manual'];
+
+function loadSort(): SortKey {
+  try {
+    const saved = localStorage.getItem(SORT_STORAGE_KEY);
+    return SORT_KEYS.find((k) => k === saved) ?? 'recent';
+  } catch {
+    return 'recent';
+  }
+}
+
 export function PipelineView({ query, onQuery, settings, onNewLead, focus, navigate, notify }: PipelineViewProps) {
-  const { deals, moveDeal, updateDeal, logActivity, handoffDeal, loseDeal } = useStore();
+  const { deals, moveDeal, reorderDeal, updateDeal, logActivity, handoffDeal, loseDeal } = useStore();
   const t = useT();
   const [segments, setSegments] = useState<Set<Segment>>(new Set());
-  const [sort, setSort] = useState<SortKey>('recent');
+  const [sort, setSort] = useState<SortKey>(loadSort);
+  // Así el orden manual sigue visible al recargar
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_STORAGE_KEY, sort);
+    } catch {
+      /* sin almacenamiento: la elección solo dura la sesión */
+    }
+  }, [sort]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [quoting, setQuoting] = useState<string | null>(null);
@@ -81,6 +102,21 @@ export function PipelineView({ query, onQuery, settings, onNewLead, focus, navig
       notify(`${deal.company} → ${t(STAGE_BY_ID[stage].name)}`);
     },
     [deals, moveDeal, notify, t],
+  );
+
+  // Drag & drop del tablero: aplica el plan sobre el orden completo (los filtros solo ocultan deals)
+  const handleReorder = useCallback(
+    (id: string, plan: DropPlan) => {
+      const deal = deals.find((d) => d.id === id);
+      if (!deal) return;
+      for (const op of plan.ops) reorderDeal(op.id, op.stage, op.beforeId);
+      if (plan.switchToManual) setSort('manual');
+      if (plan.crossStage) {
+        const target = plan.ops[plan.ops.length - 1]!.stage;
+        notify(`${deal.company} → ${t(STAGE_BY_ID[target].name)}`);
+      }
+    },
+    [deals, reorderDeal, notify, t],
   );
 
   const closeDrawer = useCallback(() => setSelectedId(null), []);
@@ -144,7 +180,7 @@ export function PipelineView({ query, onQuery, settings, onNewLead, focus, navig
         />
       </div>
       <div className="min-h-[560px] flex-1 px-4 pb-4 md:min-h-0 md:px-6">
-        <KanbanBoard stages={STAGES} deals={visible} sort={sort} settings={settings} onMove={handleMove} onOpen={setSelectedId} onAdd={onNewLead} />
+        <KanbanBoard stages={STAGES} deals={visible} allDeals={deals} sort={sort} settings={settings} onReorder={handleReorder} onOpen={setSelectedId} onAdd={onNewLead} />
       </div>
 
       <DealDrawer deal={selected} onClose={closeDrawer} onMove={handleMove} onUpdate={updateDeal} onLog={handleLog} onHandoff={handleHandoff} onLose={handleLose} onQuote={(d) => setQuoting(d.id)} onPreview={(d) => d.quote && setPreview({ dealId: d.id, quote: d.quote })} />

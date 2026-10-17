@@ -24,6 +24,59 @@ describe('reducer del store', () => {
     expect(next.deals[0]).toBe(deal);
   });
 
+  describe('deal/reorder', () => {
+    const ids = (s: ReturnType<typeof seedState>, stage: string) => s.deals.filter((d) => d.stage === stage).map((d) => d.id);
+    const columnWith = (min: number) => {
+      const state = seedState();
+      const stage = state.deals.find((d) => state.deals.filter((x) => x.stage === d.stage).length >= min)!.stage;
+      return { state, stage, col: ids(state, stage) };
+    };
+
+    it('reordena dentro de la misma columna sin tocar etapa, probabilidad ni actividades', () => {
+      const { state, stage, col } = columnWith(2);
+      const last = col[col.length - 1]!;
+      const next = reducer(state, { type: 'deal/reorder', id: last, stage, beforeId: col[0]!, at, activityId: 'r1' });
+      expect(ids(next, stage)).toEqual([last, ...col.slice(0, -1)]);
+      const before = state.deals.find((d) => d.id === last)!;
+      const after = next.deals.find((d) => d.id === last)!;
+      expect(after.stage).toBe(before.stage);
+      expect(after.probability).toBe(before.probability);
+      expect(after.activities).toBe(before.activities);
+      expect(next.deals).toHaveLength(state.deals.length);
+    });
+
+    it('con beforeId null lo deja al final de su columna', () => {
+      const { state, stage, col } = columnWith(2);
+      const next = reducer(state, { type: 'deal/reorder', id: col[0]!, stage, beforeId: null, at, activityId: 'r1' });
+      expect(ids(next, stage)).toEqual([...col.slice(1), col[0]!]);
+    });
+
+    it('al soltar en otra columna cambia etapa y probabilidad, registra una actividad y queda antes de la tarjeta indicada', () => {
+      const state = seedState();
+      const deal = state.deals.find((d) => d.stage === 'leads')!;
+      const target = state.deals.find((d) => d.stage === 'proposal')!;
+      const next = reducer(state, { type: 'deal/reorder', id: deal.id, stage: 'proposal', beforeId: target.id, at, activityId: 'r1' });
+      const moved = next.deals.find((d) => d.id === deal.id)!;
+      expect(moved.stage).toBe('proposal');
+      expect(moved.probability).toBe(50);
+      expect(moved.activities).toHaveLength(deal.activities.length + 1);
+      expect(moved.activities[0]).toEqual({ id: 'r1', type: 'note', text: 'Movido a Propuesta Enviada', at });
+      expect(next.deals.findIndex((d) => d.id === deal.id) + 1).toBe(next.deals.findIndex((d) => d.id === target.id));
+    });
+
+    it('un id desconocido devuelve el mismo estado', () => {
+      const state = seedState();
+      expect(reducer(state, { type: 'deal/reorder', id: 'nope', stage: 'leads', beforeId: null, at, activityId: 'r1' })).toBe(state);
+    });
+
+    it('soltar sobre sí mismo o sin cambio de orden devuelve el mismo estado', () => {
+      const { state, stage, col } = columnWith(2);
+      expect(reducer(state, { type: 'deal/reorder', id: col[0]!, stage, beforeId: col[0]!, at, activityId: 'r1' })).toBe(state);
+      expect(reducer(state, { type: 'deal/reorder', id: col[0]!, stage, beforeId: col[1]!, at, activityId: 'r1' })).toBe(state);
+      expect(reducer(state, { type: 'deal/reorder', id: col[col.length - 1]!, stage, beforeId: null, at, activityId: 'r1' })).toBe(state);
+    });
+  });
+
   it('marcar como perdido saca el deal del pipeline y lo guarda en el historial', () => {
     const state = seedState();
     const deal = state.deals[0]!;
