@@ -4,6 +4,8 @@ CRM y pipeline de ventas para una agencia de desarrollo web y apps móviles.
 React 18 + TypeScript + Tailwind CSS v4 + Lucide React, sobre Vite. Sin librerías de estado ni de gráficos:
 el store es Context + useReducer y los gráficos son SVG propios.
 
+**Demo en vivo:** https://rapport-crm-six.vercel.app
+
 ```bash
 npm install
 npm run dev        # http://localhost:5173
@@ -104,8 +106,20 @@ npm run typecheck # tsc --noEmit
 
 ## Capturas
 
-Guarda las capturas en `docs/` (claro, oscuro, ES/EN, móvil, cotizador) y enlázalas aquí:
+**Pipeline** (oscuro y claro)
 
-```md
-![Pipeline](docs/pipeline-dark.png)
-```
+![Pipeline en modo oscuro](docs/pipeline-dark.jpg)
+![Pipeline en modo claro](docs/pipeline-light.jpg)
+
+**Overview**
+
+![Overview](docs/overview.jpg)
+
+**Cotizador y propuesta**
+
+![Cotizador](docs/quote-builder.jpg)
+![Propuesta](docs/proposal.jpg)
+
+**Móvil**
+
+<img src="docs/mobile.png" alt="Vista móvil" width="320" />
