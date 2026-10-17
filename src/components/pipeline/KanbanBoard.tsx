@@ -14,7 +14,7 @@ interface KanbanBoardProps {
 
 const lastTouch = (d: Deal) => new Date(d.activities[0]?.at ?? d.createdAt).getTime();
 
-const SORTERS: Record<SortKey, (a: Deal, b: Deal) => number> = {
+const SORTERS: Record<Exclude<SortKey, 'manual'>, (a: Deal, b: Deal) => number> = {
   recent: (a, b) => lastTouch(b) - lastTouch(a),
   value: (a, b) => b.value - a.value,
   probability: (a, b) => b.probability - a.probability || b.value - a.value,
@@ -28,7 +28,8 @@ export function KanbanBoard({ stages, deals, sort, settings, onMove, onOpen, onA
   const columns = useMemo(() => {
     const byStage = Object.fromEntries(stages.map((s) => [s.id, [] as Deal[]])) as Record<StageId, Deal[]>;
     for (const d of deals) byStage[d.stage].push(d);
-    for (const s of stages) byStage[s.id].sort(SORTERS[sort]);
+    // Manual: se respeta el orden de `deals` sin reordenar
+    if (sort !== 'manual') for (const s of stages) byStage[s.id].sort(SORTERS[sort]);
     return byStage;
   }, [stages, deals, sort]);
 

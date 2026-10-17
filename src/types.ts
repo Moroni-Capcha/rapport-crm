@@ -84,7 +84,7 @@ export interface Quote {
   updatedAt: string;
 }
 
-export type SortKey = 'recent' | 'value' | 'probability';
+export type SortKey = 'recent' | 'value' | 'probability' | 'manual';
 
 export interface BoardSettings {
   showProbability: boolean;

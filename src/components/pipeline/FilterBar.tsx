@@ -20,6 +20,7 @@ const SORTS: { id: SortKey; label: string }[] = [
   { id: 'recent', label: 'Último contacto' },
   { id: 'value', label: 'Valor' },
   { id: 'probability', label: 'Probabilidad' },
+  { id: 'manual', label: 'Manual' },
 ];
 
 export function FilterBar({ active, counts, total, onToggle, onClear, sort, onSort, query, onQuery }: FilterBarProps) {

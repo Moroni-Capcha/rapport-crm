@@ -28,7 +28,7 @@ Migrate the Pipeline Kanban drag & drop to `@dnd-kit` so cards can be reordered 
 ## Tasks
 
 - [x] T1 Store: `deal/reorder` action in `AppStore.tsx` + reducer tests (same-column reorder, cross-column move at position, `beforeId: null`, unknown id no-op). Route: delegated writer (2 files; trigger: 2+ non-trivial files). Evidence: `npm test` 5 files / 24 tests pass, `npm run typecheck` clean (writer and parent spot check). Commit: see git log (`feat(store): add deal/reorder action`).
-- [ ] T2 Sort: add `manual` to `SortKey` (`types.ts`), "Manual" option in `FilterBar.tsx`, manual ordering in `KanbanBoard` (array order), `en.ts` entries. Route: delegated writer.
+- [x] T2 Sort: add `manual` to `SortKey` (`types.ts`), "Manual" option in `FilterBar.tsx`, manual ordering in `KanbanBoard` (array order), `en.ts` entries (`'Manual'` already existed). Route: delegated writer. Evidence: `npm test` 24 pass, `npm run typecheck` clean, `npm run build` ok (writer); parent re-ran test and typecheck. Native review (user granted): approved, 3 non-blocking advisories (manual order has no setter until T3; no test for the manual branch, covered by reducer tests; SortKey widening, typecheck clean). Commit: `feat(pipeline): add manual sort option`.
 - [ ] T3 dnd-kit: add `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`; rewrite `KanbanBoard`/`KanbanColumn`/`DealCard` with DndContext, SortableContext, sensors, drag handle, DragOverlay, translated announcements; wire `PipelineView` (`handleReorder`, auto-switch to manual). Route: delegated writer.
 - [ ] T4 Docs and copy: README (drag, touch, keyboard, Manual sort), `en.ts` drag hint text, CLAUDE.md if conventions changed. Route: inline.
 
@@ -41,8 +41,8 @@ Migrate the Pipeline Kanban drag & drop to `@dnd-kit` so cards can be reordered 
 
 ## Progress
 
-Branch: `feat/dnd-kit-reorder`. T1 done (reducer action + `reorderDeal` in context, 5 new tests, ~88 changed lines).
+Branch: `feat/dnd-kit-reorder`. T1 done (reducer action + `reorderDeal` in context, 5 new tests, ~88 changed lines). T2 done (manual sort option, ~8 changed lines). Review assessment: T1 commit medium/under budget; T2 reviewed and approved (consent granted). Pending: the earlier T1 range consent prompt (lineage review-ab49a7889c1db31f) was never answered.
 
 ## Next step
 
-T2.
+T3.
