@@ -51,6 +51,7 @@ export function nextInvoiceNumber(projects: Project[]) {
 
 export type Action =
   | { type: 'deal/move'; id: string; stage: StageId; at: string; activityId: string }
+  | { type: 'deal/reorder'; id: string; stage: StageId; beforeId: string | null; at: string; activityId: string }
   | { type: 'deal/add'; deal: Deal }
   | { type: 'deal/update'; id: string; patch: Partial<Deal> }
   | { type: 'deal/log'; id: string; activity: Activity }
@@ -78,6 +79,33 @@ export function reducer(state: State, action: Action): State {
           };
         }),
       };
+    case 'deal/reorder': {
+      const deal = state.deals.find((d) => d.id === action.id);
+      if (!deal || action.beforeId === action.id) return state;
+      const changesStage = deal.stage !== action.stage;
+      const stage = STAGE_BY_ID[action.stage];
+      const placed: Deal = changesStage
+        ? {
+            ...deal,
+            stage: action.stage,
+            probability: stage.probability,
+            activities: [{ id: action.activityId, type: 'note', text: `Movido a ${stage.name}`, at: action.at }, ...deal.activities],
+          }
+        : deal;
+      const rest = state.deals.filter((d) => d.id !== action.id);
+      // Posición: antes de beforeId; si no existe, tras el último deal de la etapa (o al final)
+      let index = action.beforeId === null ? -1 : rest.findIndex((d) => d.id === action.beforeId);
+      if (index === -1) {
+        let last = -1;
+        rest.forEach((d, i) => {
+          if (d.stage === action.stage) last = i;
+        });
+        index = last === -1 ? rest.length : last + 1;
+      }
+      const deals = [...rest.slice(0, index), placed, ...rest.slice(index)];
+      if (!changesStage && deals.every((d, i) => d === state.deals[i])) return state;
+      return { ...state, deals };
+    }
     case 'deal/add':
       return { ...state, deals: [action.deal, ...state.deals] };
     case 'deal/update':
@@ -147,6 +175,11 @@ function useStoreValue() {
 
   const moveDeal = useCallback(
     (id: string, stage: StageId) => dispatch({ type: 'deal/move', id, stage, at: new Date().toISOString(), activityId: uid() }),
+    [],
+  );
+  const reorderDeal = useCallback(
+    (id: string, stage: StageId, beforeId: string | null) =>
+      dispatch({ type: 'deal/reorder', id, stage, beforeId, at: new Date().toISOString(), activityId: uid() }),
     [],
   );
   const addDeal = useCallback((deal: Deal) => dispatch({ type: 'deal/add', deal }), []);
@@ -227,9 +260,9 @@ function useStoreValue() {
       ...state,
       /** Historial completo: datos de ejemplo + deals perdidos en esta demo */
       history: [...state.lost, ...HISTORY],
-      moveDeal, addDeal, updateDeal, logActivity, handoffDeal, updateProject, advancePhase, setMilestoneStatus, addEvent, loseDeal, resetDemo,
+      moveDeal, reorderDeal, addDeal, updateDeal, logActivity, handoffDeal, updateProject, advancePhase, setMilestoneStatus, addEvent, loseDeal, resetDemo,
     }),
-    [state, moveDeal, addDeal, updateDeal, logActivity, handoffDeal, updateProject, advancePhase, setMilestoneStatus, addEvent, loseDeal, resetDemo],
+    [state, moveDeal, reorderDeal, addDeal, updateDeal, logActivity, handoffDeal, updateProject, advancePhase, setMilestoneStatus, addEvent, loseDeal, resetDemo],
   );
 }
 
