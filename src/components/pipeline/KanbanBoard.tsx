@@ -59,11 +59,9 @@ function groupByStage(stages: Stage[], deals: Deal[], sort: SortKey) {
 const idsOf = (stages: Stage[], columns: Record<StageId, Deal[]>) =>
   Object.fromEntries(stages.map((s) => [s.id, columns[s.id].map((d) => d.id)])) as Columns;
 
-// Con ratón/touch manda dónde está el puntero; con teclado no hay puntero y se usa la cercanía de esquinas
-const collisionDetection: CollisionDetection = (args) => {
-  const hits = pointerWithin(args);
-  return hits.length > 0 ? hits : closestCorners(args);
-};
+// Con ratón/touch manda dónde está el puntero: soltar fuera de toda columna no mueve nada.
+// Con teclado no hay puntero (`pointerCoordinates` es null) y se usa la cercanía de esquinas.
+const collisionDetection: CollisionDetection = (args) => (args.pointerCoordinates ? pointerWithin(args) : closestCorners(args));
 
 export function KanbanBoard({ stages, deals, allDeals, sort, settings, onReorder, onOpen, onAdd }: KanbanBoardProps) {
   const t = useT();
