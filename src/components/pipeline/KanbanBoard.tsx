@@ -2,7 +2,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   closestCorners,
   pointerWithin,
@@ -70,7 +70,8 @@ export function KanbanBoard({ stages, deals, allDeals, sort, settings, onReorder
 
   const sensors = useSensors(
     // Distancia: un click simple sigue abriendo el detalle
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // MouseSensor y no PointerSensor: este también recibe eventos táctiles y se saltaría la pulsación larga de abajo
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     // Pulsación corta: el scroll táctil sigue funcionando
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
